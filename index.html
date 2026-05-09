@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>亚马逊周报销量工具</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="app">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">周报工具</div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-page="import">
+                    <span class="nav-icon">📥</span>
+                    <span class="nav-text">导入数据</span>
+                </a>
+                <a href="#" class="nav-item" data-page="report">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">报表预览</span>
+                </a>
+                <a href="#" class="nav-item" data-page="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-text">设置</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="user-badge">网页版 v1.0</span>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 导入数据页 -->
+            <div class="page page-import active">
+                <div class="page-header">
+                    <h1 class="page-title">导入数据</h1>
+                    <p class="page-subtitle">上传ERP销量表和利润报表，系统自动解析并汇总</p>
+                </div>
+
+                <div class="cards-grid">
+                    <!-- 本周销量表 -->
+                    <div class="card">
+                        <h3 class="card-title">本周ERP销量表</h3>
+                        <div class="drop-zone" id="salesDrop">
+                            <div class="drop-zone-icon">⬆</div>
+                            <div class="drop-zone-title">拖拽销量报表到此处</div>
+                            <div class="drop-zone-subtitle">支持 优卖云 / 赛狐ERP / 通用格式</div>
+                            <input type="file" class="file-input" id="salesFile" accept=".xlsx,.xls,.csv">
+                        </div>
+                        <div class="file-status" id="salesStatus">未选择文件</div>
+                        <button class="btn btn-secondary" onclick="document.getElementById('salesFile').click()">选择文件</button>
+                    </div>
+
+                    <!-- 本周利润表 -->
+                    <div class="card">
+                        <h3 class="card-title">本周利润报表（可选）</h3>
+                        <div class="drop-zone" id="profitDrop">
+                            <div class="drop-zone-icon">⬆</div>
+                            <div class="drop-zone-title">拖拽利润报表到此处</div>
+                            <div class="drop-zone-subtitle">支持 优卖云 / 赛狐ERP / 通用格式</div>
+                            <input type="file" class="file-input" id="profitFile" accept=".xlsx,.xls,.csv">
+                        </div>
+                        <div class="file-status" id="profitStatus">未选择文件</div>
+                        <button class="btn btn-secondary" onclick="document.getElementById('profitFile').click()">选择文件</button>
+                    </div>
+                </div>
+
+                <!-- 上周数据 -->
+                <div class="card card-full">
+                    <h3 class="card-title">上周数据（用于环比对比）</h3>
+                    <p class="card-desc">如不需要环比分析，可跳过此步骤</p>
+                    <div class="cards-grid half">
+                        <div>
+                            <div class="drop-zone" id="lastSalesDrop">
+                                <div class="drop-zone-icon">⬆</div>
+                                <div class="drop-zone-title">拖拽上周销量报表</div>
+                                <div class="drop-zone-subtitle">可选</div>
+                                <input type="file" class="file-input" id="lastSalesFile" accept=".xlsx,.xls,.csv">
+                            </div>
+                            <div class="file-status" id="lastSalesStatus">未选择文件</div>
+                        </div>
+                        <div>
+                            <div class="drop-zone" id="lastProfitDrop">
+                                <div class="drop-zone-icon">⬆</div>
+                                <div class="drop-zone-title">拖拽上周利润报表</div>
+                                <div class="drop-zone-subtitle">可选</div>
+                                <input type="file" class="file-input" id="lastProfitFile" accept=".xlsx,.xls,.csv">
+                            </div>
+                            <div class="file-status" id="lastProfitStatus">未选择文件</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 周期设置 -->
+                <div class="card card-full">
+                    <h3 class="card-title">分析周期设置</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>分析周期:</label>
+                            <select class="form-select" id="periodType">
+                                <option value="weekly">周报</option>
+                                <option value="monthly">月报</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex-grow">
+                            <label>日期范围:</label>
+                            <input type="text" class="form-input" id="dateRange" placeholder="如: 4.27-5.3">
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <span class="input-tip" id="dateTip">格式: M.D-M.D</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 进度与按钮 -->
+                <div class="progress-bar" id="progressBar" style="display:none;">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="action-bar">
+                    <button class="btn btn-ghost" id="btnClear">清空</button>
+                    <button class="btn btn-primary" id="btnProcess">开始处理</button>
+                </div>
+            </div>
+
+            <!-- 报表预览页 -->
+            <div class="page page-report">
+                <div class="page-header">
+                    <h1 class="page-title" id="reportTitle">周报预览</h1>
+                    <button class="btn btn-primary" id="btnExport">导出Excel</button>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div class="stats-bar" id="statsBar">
+                    <div class="stat-card">
+                        <div class="stat-name">ASIN数</div>
+                        <div class="stat-value" id="statAsin">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-name">7天总销</div>
+                        <div class="stat-value" id="statRevenue">$0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-name">7天总单</div>
+                        <div class="stat-value" id="statUnits">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-name">广告费</div>
+                        <div class="stat-value" id="statAdSpend">$0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-name">平均Tacos</div>
+                        <div class="stat-value" id="statTacos">0%</div>
+                    </div>
+                </div>
+
+                <!-- 数据表格 -->
+                <div class="card table-card">
+                    <div class="table-wrapper">
+                        <table class="data-table" id="dataTable">
+                            <thead>
+                                <tr>
+                                    <th>ASIN</th>
+                                    <th>店铺</th>
+                                    <th>7天销售额</th>
+                                    <th>7天销量</th>
+                                    <th>30天销量</th>
+                                    <th>均价</th>
+                                    <th>广告费用</th>
+                                    <th>Tacos</th>
+                                    <th>广告转化率</th>
+                                    <th>自然转化率</th>
+                                    <th>CPA</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <tr class="empty-row">
+                                    <td colspan="11">暂无数据，请在导入页面处理报表</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置页 -->
+            <div class="page page-settings">
+                <div class="page-header">
+                    <h1 class="page-title">设置</h1>
+                </div>
+                <div class="card card-full">
+                    <h3 class="card-title">关于</h3>
+                    <p class="card-desc">亚马逊周报销量工具 - 网页版 v1.0.0</p>
+                    <p class="card-desc">自动化数据汇总与报告生成</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/parser.js"></script>
+    <script src="js/processor.js"></script>
+    <script src="js/exporter.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
